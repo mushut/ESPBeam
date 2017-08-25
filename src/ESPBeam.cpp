@@ -31,9 +31,12 @@ static void vReadWriteUART(void *pvParameters) {
 		char character = 255;
 
 		// While loop for reading characters from serial
-		while ((character = Board_UARTGetChar()) != 255) {
-					Board_UARTPutChar(character);
+		character = Board_UARTGetChar(character);
+		if (character != 255) {
+			Board_UARTPutChar(character);
 		}
+
+		vTaskDelay(configTICK_RATE_HZ / 1000);
 	}
 }
 
