@@ -15,4 +15,3 @@ GCodeParser::GCodeParser() {
 GCodeParser::~GCodeParser() {
 	// TODO Auto-generated destructor stub
 }
-
