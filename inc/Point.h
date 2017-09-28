@@ -14,6 +14,9 @@ public:
 	Point(double x_, double y_);
 	virtual ~Point();
 	void setPoint(double x_, double y_);
+	double getPointX();
+	double getPointY();
+	double distance(Point secondPoint);
 private:
 	double x;
 	double y;
