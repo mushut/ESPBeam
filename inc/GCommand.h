@@ -20,7 +20,7 @@ enum code{
 
 struct GCommand {
 	code gCodeCommand;
-	Point point();
+	Point point;
 	char pin[10];
 	char penState[10];
 };
