@@ -29,6 +29,7 @@ using namespace std;
 
 #include "Semaphore.h"
 #include "GCodeParser.h"
+#include "timers.h"
 
 // TODO: insert other definitions and declarations here
 struct commandEvent{
@@ -69,13 +70,11 @@ void executeCommand(GCommand &cmd) {
 	case M1:
 		if(strcmp(cmd.penState, "90"))/*pin.write(true)*/;
 		else if(strcmp(cmd.penState, "160"))/*pin.write(false)*/;
-		vTaskDelay(1);
 		break;
 	case M10:
 	{
 		char m10[] = "M10 XY 380 310 0.00 0.00 A0 B0 H0 S80 U160 D90\n";
 		USB_send((uint8_t *)m10, sizeof(m10));
-		vTaskDelay(1);
 		break;
 	}
 	case G1:
@@ -109,10 +108,6 @@ static void usb_read(void *pvParameters) {
 			len = USB_receive((uint8_t *)buffer, 29);
 			buffer[len] = 0;
 
-//			mutexSemaphore.take();
-//			USB_send((uint8_t *)buffer, len);
-//			mutexSemaphore.give();
-
 			// Concatenate buffer to input
 			for(x = 0; buffer[x] != 0; x++) {
 				if(y < 29){
@@ -130,7 +125,6 @@ static void usb_read(void *pvParameters) {
 		strcpy(e.command, input);
 
 		xQueueSendToBack(xQueue, &e, portMAX_DELAY);
-		countingSemaphore.give();
 
 		break;
 
@@ -148,20 +142,20 @@ static void stepper_driver(void *pvParameters) {
 	commandEvent e;
 	GCodeParser parser;
 	GCommand command;
-	char ok[] = "OK";
+	char ok[] = "OK\n";
 
 	while(1) {
-		countingSemaphore.take();
 
-		while(xQueueReceive(xQueue, &e, 10)) {
+		// Try to receive item from queue
+		while(xQueueReceive(xQueue, &e, portMAX_DELAY)) {
 			command = *parser.parseGCode(e.command);
 
 			executeCommand(command);
 
 			USB_send((uint8_t *)ok, sizeof(ok));
 		}
+		vTaskDelay(1);
 	}
-
 }
 
 
@@ -173,15 +167,15 @@ int main(void) {
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
-			configMINIMAL_STACK_SIZE * 10, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 	/* Stepper driver -thread */
 	xTaskCreate(stepper_driver, "stepper_driver",
-			configMINIMAL_STACK_SIZE * 10, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
-	/* LED2 toggle thread */
+	/* CDC Task */
 	xTaskCreate(cdc_task, "CDC",
 			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);

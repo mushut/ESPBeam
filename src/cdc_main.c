@@ -226,7 +226,7 @@ void cdc_task(void *pvParameters)
 	do {
 #ifndef POLLING_CDC
 		/* Sleep until next IRQ happens */
-		xSemaphoreTake(xCDCEventSemaphore, configTICK_RATE_HZ / 10);
+		//xSemaphoreTake(xCDCEventSemaphore, configTICK_RATE_HZ / 10);
 #endif
 	} while(vcom_connected() == 0);
 

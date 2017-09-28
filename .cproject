@@ -41,8 +41,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_15xx/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/freertos/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_15xx/inc/usbd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<option id="com.crt.advproject.cpp.misc.dialect.228877609" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" useByScannerDiscovery="true" value="com.crt.advproject.misc.dialect.cpp11" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.584438450" superClass="com.crt.advproject.compiler.cpp.input"/>
@@ -68,8 +67,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_15xx/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/freertos/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_15xx/inc/usbd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<option id="com.crt.advproject.c.misc.dialect.1023655233" name="Language standard" superClass="com.crt.advproject.c.misc.dialect" useByScannerDiscovery="true" value="com.crt.advproject.misc.dialect.c11" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.input.44611622" superClass="com.crt.advproject.compiler.input"/>
@@ -86,8 +84,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/freertos/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;C:\Users\Eibl-PC\Documents\MCUXpressoIDE_10.0.2_411\workspace\lpc_chip_15xx\inc\usbd&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_15xx/inc/usbd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1451033743" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.797902264" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
@@ -176,6 +173,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<option id="com.crt.advproject.cpp.misc.dialect.243452853" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" useByScannerDiscovery="true" value="com.crt.advproject.misc.dialect.cpp11" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.509896746" superClass="com.crt.advproject.compiler.cpp.input"/>
@@ -204,6 +202,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<option id="com.crt.advproject.c.misc.dialect.268781313" name="Language standard" superClass="com.crt.advproject.c.misc.dialect" value="com.crt.advproject.misc.dialect.c11" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.input.416675389" superClass="com.crt.advproject.compiler.input"/>
@@ -222,6 +221,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Lab_5_Ex3/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESPBeam/inc}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1470052558" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.53299013" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
