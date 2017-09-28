@@ -59,14 +59,19 @@ GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 //
 //		double x = atof(xcoord),
 //				y = atof(ycoord);
-//
-//		gCommand.gCodeCommand = G1;
+
+		gCommand.gCodeCommand = G1;
 //		gCommand.point.setPoint(x, y);
 	}
 
 	/* Case "G28" */
 	else if(strcmp(code[0], "G28") == 0) {
 		gCommand.gCodeCommand = G28;
+	}
+
+
+	else {
+		gCommand.gCodeCommand = CLR;
 	}
 
 	return &gCommand;

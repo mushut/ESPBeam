@@ -66,21 +66,42 @@ static void prvSetupHardware(void)
 /* Public Functions */
 
 void executeCommand(GCommand &cmd) {
+	char ok[] = "OK\n";
+
+
 	switch(cmd.gCodeCommand) {
+
+	// Servo
 	case M1:
 		if(strcmp(cmd.penState, "90"))/*pin.write(true)*/;
 		else if(strcmp(cmd.penState, "160"))/*pin.write(false)*/;
+		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
+
+	// Initialisation
 	case M10:
 	{
 		char m10[] = "M10 XY 380 310 0.00 0.00 A0 B0 H0 S80 U160 D90\n";
 		USB_send((uint8_t *)m10, sizeof(m10));
+		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
+
+	// Stepper
 	case G1:
+	{
+		char temp[] = "Distance = x\n";
+		USB_send((uint8_t *)temp, sizeof(temp));
+		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
+	}
+
+	// Some other G-command...
 	case G28:
+		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
+
+	// Default case
 	default:
 		break;
 	}
@@ -95,6 +116,7 @@ static void usb_read(void *pvParameters) {
 	/* Initialise variables */
 	char buffer[30] = {0};
 	char input[30] = {0};
+	commandEvent e;
 
 	uint32_t len = 0;
 	uint32_t x = 0;
@@ -115,45 +137,50 @@ static void usb_read(void *pvParameters) {
 				}
 			}
 
+			// Stop reading when '\n' received
 			if(buffer[len - 1] == '\n'){
 				break;
 			}
-
-			vTaskDelay(1);
 		}
-		commandEvent e;
+
+		// Copy given command to the queue object
 		strcpy(e.command, input);
 
+		// Send queue object to queue
 		xQueueSendToBack(xQueue, &e, portMAX_DELAY);
 
-		break;
+		// Reset values
+		memset(input, 0, sizeof(input));
+		memset(buffer, 0, sizeof(buffer));
+		memset(e.command, 0, sizeof(e.command));
+		y = 0;
 
+		// Delay
+		vTaskDelay(1);
 	}
-
-	// Reset values
-	memset(input, 0, sizeof(input));
-
-	vTaskDelay(1);
-
 }
 
 /* Stepper driver -thread */
 static void stepper_driver(void *pvParameters) {
+
+	/* Initialise */
 	commandEvent e;
 	GCodeParser parser;
 	GCommand command;
-	char ok[] = "OK\n";
 
+	/* Loop */
 	while(1) {
 
 		// Try to receive item from queue
 		while(xQueueReceive(xQueue, &e, portMAX_DELAY)) {
-			command = *parser.parseGCode(e.command);
 
-			executeCommand(command);
-
-			USB_send((uint8_t *)ok, sizeof(ok));
+			// Command execution
+			command = *(parser.parseGCode(e.command));	// Parse given command into a Command object
+			executeCommand(command);					// Execute given command
+			vTaskDelay(1);								// Delay
 		}
+
+		// Delay
 		vTaskDelay(1);
 	}
 }

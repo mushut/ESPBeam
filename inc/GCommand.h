@@ -14,7 +14,8 @@ enum code{
 	M1,
 	M10,
 	G1,
-	G28
+	G28,
+	CLR
 };
 
 struct GCommand {
