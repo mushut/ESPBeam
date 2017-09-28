@@ -17,10 +17,9 @@ GCodeParser::~GCodeParser() {
 GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 
 	int i = 0,
-		j = 0,
-		x = 0;
+			j = 0,
+			x = 0;
 	char code[6][10] = {0};
-	char part[10] = {0};
 
 	// Parse until end of input
 	for(i = 0; gCodeRaw[i] != 0; i++) {
@@ -33,35 +32,48 @@ GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 		// Write code to pointer array and reset code value
 		else{
 			x++;
-//			strcpy(code[x++],part);
 			j = 0;
-//			memset(part, 0, sizeof(part));
 		}
 	}
 
 	// Create and return command
 
-	/* Case "M10" */
+	/* Case "M10" (Initialisation)*/
 	if(strcmp(code[0], "M10") == 0) {
 		gCommand.gCodeCommand = M10;
 	}
 
-	/* Case "M1" */
+	/* Case "M1" (Servo)*/
 	else if(strcmp(code[0], "M1") == 0) {
 		gCommand.gCodeCommand = M1;
 		strcpy(gCommand.penState, code[1]);
 	}
 
-	/* Case "G1" */
+	/* Case "G1" (Stepper)*/
 	else if(strcmp(code[0], "G1") == 0) {
-//		char *xcoord = code[1]++,
-//				*ycoord = code[2]++;
-//
-//		double x = atof(xcoord),
-//				y = atof(ycoord);
 
+		// Initialise variables
+		int i = 0;
+		char xcoord[10] = {0},
+			ycoord[10] = {0};
+
+		// Parse x-coordinate
+		for(i = 1; code[1][i] != 0; i++) {
+			xcoord[i - 1] = code[1][i];
+		}
+
+		// Parse y-coordinate
+		for(i = 1; code[2][i] != 0; i++) {
+			ycoord[i - 1] = code[2][i];
+		}
+
+		// Convert coordinate from array to double
+		double x = atof(xcoord),
+				y = atof(ycoord);
+
+		// Format command
 		gCommand.gCodeCommand = G1;
-//		gCommand.point.setPoint(x, y);
+		gCommand.point.setPoint(x, y);
 	}
 
 	/* Case "G28" */
@@ -69,7 +81,7 @@ GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 		gCommand.gCodeCommand = G28;
 	}
 
-
+	/* Just in case */
 	else {
 		gCommand.gCodeCommand = CLR;
 	}
