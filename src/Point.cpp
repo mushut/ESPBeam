@@ -31,7 +31,7 @@ double Point::getPointY() {
 }
 
 double Point::distance(Point secondPoint) {
-	double result = sqrt(pow((secondPoint.getPointX() - pointX),2)+pow((secondPoint.getPointY() - pointY),2));
+	double result = sqrt(pow((secondPoint.getPointX() - x),2)+pow((secondPoint.getPointY() - y),2));
 }
 
 Point::Point() {
