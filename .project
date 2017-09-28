@@ -3,6 +3,8 @@
 	<name>ESPBeam</name>
 	<comment></comment>
 	<projects>
+		<project>freertos</project>
+		<project>Lab_5_Ex3</project>
 		<project>lpc_board_nxp_lpcxpresso_1549</project>
 		<project>lpc_chip_15xx</project>
 	</projects>
