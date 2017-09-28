@@ -6,7 +6,7 @@
  Copyright   : $(copyright)
  Description : main definition
 ===============================================================================
-*/
+ */
 
 #if defined (__USE_LPCOPEN)
 #if defined(NO_BOARD_LIB)
@@ -16,29 +16,28 @@
 #endif
 #endif
 
+using namespace std;
+
 #include <cr_section_macros.h>
 
 // TODO: insert other include files here
 #include "FreeRTOS.h"
 #include "task.h"
+#include "ITM_write.h"
+
+#include "user_vcom.h"
+
+#include "Semaphore.h"
+#include "GCodeParser.h"
+#include "timers.h"
 
 // TODO: insert other definitions and declarations here
-
-/* Read from serial and write to serial */
-static void vReadWriteUART(void *pvParameters) {
-
-	while(1) {
-		char character = 255;
-
-		// While loop for reading characters from serial
-		character = Board_UARTGetChar(character);
-		if (character != 255) {
-			Board_UARTPutChar(character);
-		}
-
-		vTaskDelay(configTICK_RATE_HZ / 1000);
-	}
-}
+struct commandEvent{
+	char command[30];
+};
+Semaphore countingSemaphore(Semaphore::counting);
+Semaphore mutexSemaphore(Semaphore::mutex);
+QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
@@ -52,26 +51,166 @@ void vConfigureTimerForRunTimeStats( void ) {
 }
 /* end runtime statictics collection */
 
+/* Sets up system hardware */
+static void prvSetupHardware(void)
+{
+	SystemCoreClockUpdate();
+	Board_Init();
+
+	/* Initial LED0 state is off */
+	Board_LED_Set(0, false);
+
+}
+
+
+/* Public Functions */
+
+void executeCommand(GCommand &cmd) {
+	char ok[] = "OK\n";
+
+
+	switch(cmd.gCodeCommand) {
+
+	// Servo
+	case M1:
+		if(strcmp(cmd.penState, "90"))/*pin.write(true)*/;
+		else if(strcmp(cmd.penState, "160"))/*pin.write(false)*/;
+		USB_send((uint8_t *)ok, sizeof(ok));
+		break;
+
+	// Initialisation
+	case M10:
+	{
+		char m10[] = "M10 XY 380 310 0.00 0.00 A0 B0 H0 S80 U160 D90\n";
+		USB_send((uint8_t *)m10, sizeof(m10));
+		USB_send((uint8_t *)ok, sizeof(ok));
+		break;
+	}
+
+	// Stepper
+	case G1:
+	{
+		char temp[] = "Distance = x\n";
+		USB_send((uint8_t *)temp, sizeof(temp));
+		USB_send((uint8_t *)ok, sizeof(ok));
+		break;
+	}
+
+	// Some other G-command...
+	case G28:
+		USB_send((uint8_t *)ok, sizeof(ok));
+		break;
+
+	// Default case
+	default:
+		break;
+	}
+}
+
+/********************/
+
+
+/* USB Read -thread */
+static void usb_read(void *pvParameters) {
+
+	/* Initialise variables */
+	char buffer[30] = {0};
+	char input[30] = {0};
+	commandEvent e;
+
+	uint32_t len = 0;
+	uint32_t x = 0;
+	uint32_t y = 0;
+
+	/* Infinite loop */
+	while(1) {
+
+		/* Get input */
+		while(1) {
+			len = USB_receive((uint8_t *)buffer, 29);
+			buffer[len] = 0;
+
+			// Concatenate buffer to input
+			for(x = 0; buffer[x] != 0; x++) {
+				if(y < 29){
+					input[y++] = buffer[x];
+				}
+			}
+
+			// Stop reading when '\n' received
+			if(buffer[len - 1] == '\n'){
+				break;
+			}
+		}
+
+		// Copy given command to the queue object
+		strcpy(e.command, input);
+
+		// Send queue object to queue
+		xQueueSendToBack(xQueue, &e, portMAX_DELAY);
+
+		// Reset values
+		memset(input, 0, sizeof(input));
+		memset(buffer, 0, sizeof(buffer));
+		memset(e.command, 0, sizeof(e.command));
+		y = 0;
+
+		// Delay
+		vTaskDelay(1);
+	}
+}
+
+/* Stepper driver -thread */
+static void stepper_driver(void *pvParameters) {
+
+	/* Initialise */
+	commandEvent e;
+	GCodeParser parser;
+	GCommand command;
+
+	/* Loop */
+	while(1) {
+
+		// Try to receive item from queue
+		while(xQueueReceive(xQueue, &e, portMAX_DELAY)) {
+
+			// Command execution
+			command = *(parser.parseGCode(e.command));	// Parse given command into a Command object
+			executeCommand(command);					// Execute given command
+			vTaskDelay(1);								// Delay
+		}
+
+		// Delay
+		vTaskDelay(1);
+	}
+}
+
+
 int main(void) {
 
-	#if defined (__USE_LPCOPEN)
-		// Read clock settings and update SystemCoreClock variable
-		SystemCoreClockUpdate();
-	#if !defined(NO_BOARD_LIB)
-		// Set up and initialize all required blocks and
-		// functions related to the board hardware
-		Board_Init();
-		// Set the LED to the state of "On"
-		Board_LED_Set(0, true);
-	#endif
-	#endif
+	prvSetupHardware();
 
-    xTaskCreate(vReadWriteUART, "vReadWriteUART",
-    				configMINIMAL_STACK_SIZE, NULL, (tskIDLE_PRIORITY + 1UL),
-    				(TaskHandle_t *) NULL);
+	ITM_init();
+
+	/* Read USB -thread */
+	xTaskCreate(usb_read, "usb_read",
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	/* Stepper driver -thread */
+	xTaskCreate(stepper_driver, "stepper_driver",
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	/* CDC Task */
+	xTaskCreate(cdc_task, "CDC",
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
 
 	/* Start the scheduler */
 	vTaskStartScheduler();
 
-    return 0 ;
+	/* Should never arrive here */
+	return 1;
 }
