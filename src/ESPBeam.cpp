@@ -194,17 +194,17 @@ int main(void) {
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
-			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 	/* Stepper driver -thread */
 	xTaskCreate(stepper_driver, "stepper_driver",
-			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 	/* CDC Task */
 	xTaskCreate(cdc_task, "CDC",
-			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 
