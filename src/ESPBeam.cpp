@@ -24,20 +24,17 @@ using namespace std;
 #include "FreeRTOS.h"
 #include "task.h"
 #include "ITM_write.h"
-
 #include "user_vcom.h"
-
-#include "Semaphore.h"
 #include "GCodeParser.h"
-#include "timers.h"
+#include "StepperDriver.h"
+#include "Semaphore.h"
 
 // TODO: insert other definitions and declarations here
 struct commandEvent{
 	char command[30];
 };
-Semaphore countingSemaphore(Semaphore::counting);
-Semaphore mutexSemaphore(Semaphore::mutex);
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
+StepperDriver stepperDriver;
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
@@ -91,6 +88,11 @@ void executeCommand(GCommand &cmd) {
 	case G1:
 	{
 		char temp[] = "Distance = x\n";
+
+		//Run the stepper
+		stepperDriver.moveTo(cmd.point);
+		vTaskDelay(5); //This is to simulate the delay caused by the actual stepping for mDraw
+
 		USB_send((uint8_t *)temp, sizeof(temp));
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
