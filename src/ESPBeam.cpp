@@ -59,9 +59,7 @@ static void prvSetupHardware(void)
 
 }
 
-
 /* Public Functions */
-
 void executeCommand(GCommand &cmd) {
 	char ok[] = "OK\n";
 
@@ -90,7 +88,7 @@ void executeCommand(GCommand &cmd) {
 		char temp[] = "Distance = x\n";
 
 		//Run the stepper
-		stepperDriver.moveTo(cmd.point);
+		stepperDriver.plot(cmd.point);
 		vTaskDelay(5); //This is to simulate the delay caused by the actual stepping for mDraw
 
 		USB_send((uint8_t *)temp, sizeof(temp));
@@ -108,9 +106,7 @@ void executeCommand(GCommand &cmd) {
 		break;
 	}
 }
-
 /********************/
-
 
 /* USB Read -thread */
 static void usb_read(void *pvParameters) {
@@ -193,6 +189,11 @@ int main(void) {
 	prvSetupHardware();
 
 	ITM_init();
+	Chip_RIT_Init(LPC_RITIMER);
+	NVIC_SetPriority( RITIMER_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1 );
+
+	/* Calibrate stepper */
+	stepperDriver.calibrate();
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
