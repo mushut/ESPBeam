@@ -7,17 +7,18 @@
 
 #include "StepperDriver.h"
 
-xSemaphoreHandle sbRIT;
+xSemaphoreHandle sbRIT = xSemaphoreCreateBinary();
 static bool RIT_running;
-DigitalIoPin *xLimit1 = new DigitalIoPin(1, 9, DigitalIoPin::pullup, true);
-DigitalIoPin *xLimit2 = new DigitalIoPin(1, 10, DigitalIoPin::pullup, true);
-DigitalIoPin *xStep = new DigitalIoPin(0, 9, DigitalIoPin::output, false);
-DigitalIoPin *xDir = new DigitalIoPin(0, 29, DigitalIoPin::output, false);
 
-DigitalIoPin *yLimit1 = new DigitalIoPin(0, 27, DigitalIoPin::pullup, true);
-DigitalIoPin *yLimit2 = new DigitalIoPin(0, 28, DigitalIoPin::pullup, true);
-DigitalIoPin *yStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
-DigitalIoPin *yDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
+DigitalIoPin *xLimit1;
+DigitalIoPin *xLimit2;
+DigitalIoPin *xStep;
+DigitalIoPin *xDir;
+
+DigitalIoPin *yLimit1;
+DigitalIoPin *yLimit2;
+DigitalIoPin *yStep;
+DigitalIoPin *yDir;
 
 bool isCalibrating;
 bool isRunning;
@@ -87,53 +88,11 @@ void RIT_IRQHandler(void)
 
 	if(RIT_running) {
 
-		//		/* Running */
-		//		if(isRunning) {
-		//
-		//			// Speed up when limit is reached
-		//			if((yLimit1->read() && (stepperDirection == true)) || (yLimit2->read() && (stepperDirection == false))) {
-		//
-		//				// Switch direction
-		//				if(yLimit1->read()) stepperDirection = false;
-		//				if(yLimit2->read()) stepperDirection = true;
-		//
-		//				// Increase speed
-		//				initTime /= 1.05;
-		//				time = initTime;
-		//
-		//				// Update timer
-		//				RIT_update(initTime);
-		//
-		//				// Reset
-		//				stepCount = 0;
-		//				RIT_count = totalSteps;
-		//			}
-		//
-		//			/* Acceleration */
-		//
-		//			// Accelerate until mid point is reached
-		//			if(stepCount < (totalSteps * 0.5)) {
-		//				if(timeCounter > 75) {
-		//					time -= 1;
-		//					RIT_update(time);
-		//					timeCounter = 0;
-		//				}
-		//			}
-		//
-		//			// Decelerate until min speed or limit reached
-		//			else if(stepCount >= (totalSteps * 0.5)){
-		//
-		//				// Until tolerables speed reached
-		//				if(time <= initTime) {
-		//
-		//					if(timeCounter > 75) {
-		//						time += 1;
-		//						RIT_update(time);
-		//						timeCounter = 0;
-		//					}
-		//				}
-		//			}
-		//		}
+		/* Running */
+		if(isRunning) {
+
+
+		}
 
 		/* Calibration */
 		if(isCalibrating) {
@@ -159,10 +118,6 @@ void RIT_IRQHandler(void)
 					xLimitsHit++;
 					xStepperDir = true;
 				}
-
-			}
-
-			else {
 
 			}
 
@@ -213,13 +168,23 @@ void RIT_IRQHandler(void)
 /* Constructor */
 StepperDriver::StepperDriver() {
 
+	xLimit1 = new DigitalIoPin(1, 9, DigitalIoPin::pullup, true);
+	xLimit2 = new DigitalIoPin(1, 10, DigitalIoPin::pullup, true);
+	xStep = new DigitalIoPin(0, 9, DigitalIoPin::output, false);
+	xDir = new DigitalIoPin(0, 29, DigitalIoPin::output, false);
+
+	yLimit1 = new DigitalIoPin(0, 27, DigitalIoPin::pullup, true);
+	yLimit2 = new DigitalIoPin(0, 28, DigitalIoPin::pullup, true);
+	yStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
+	yDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
+
 	isCalibrating = true;
 	isRunning = false;
 	xStepperDir = true;
 	yStepperDir = true;
 	stepperPulse = true;
 
-	initTime = 1000000 / (configTICK_RATE_HZ * 2);
+	initTime = 700;
 	xTotalSteps = 0;
 	yTotalSteps = 0;
 	xLimitsHit = 0;
@@ -238,8 +203,8 @@ StepperDriver::~StepperDriver() {
 
 /* Plot */
 void StepperDriver::plot(Point point) {
-	x = point.getX;
-	y = point.getY;
+	x = point.getPointX();
+	y = point.getPointY();
 	RIT_start(10000, initTime);
 }
 

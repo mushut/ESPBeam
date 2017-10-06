@@ -33,8 +33,9 @@ using namespace std;
 struct commandEvent{
 	char command[30];
 };
+
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
-StepperDriver stepperDriver;
+StepperDriver *stepperDriver;
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
@@ -73,7 +74,7 @@ void executeCommand(GCommand &cmd) {
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 
-	// Initialisation
+		// Initialisation
 	case M10:
 	{
 		char m10[] = "M10 XY 380 310 0.00 0.00 A0 B0 H0 S80 U160 D90\n";
@@ -88,7 +89,7 @@ void executeCommand(GCommand &cmd) {
 		char temp[] = "Distance = x\n";
 
 		//Run the stepper
-		stepperDriver.plot(cmd.point);
+		stepperDriver->plot(cmd.point);
 		vTaskDelay(5); //This is to simulate the delay caused by the actual stepping for mDraw
 
 		USB_send((uint8_t *)temp, sizeof(temp));
@@ -101,7 +102,7 @@ void executeCommand(GCommand &cmd) {
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 
-	// Default case
+		// Default case
 	default:
 		break;
 	}
@@ -110,6 +111,9 @@ void executeCommand(GCommand &cmd) {
 
 /* USB Read -thread */
 static void usb_read(void *pvParameters) {
+
+	/* Calibrate stepper */
+	stepperDriver->calibrate();
 
 	/* Initialise variables */
 	char buffer[30] = {0};
@@ -192,8 +196,7 @@ int main(void) {
 	Chip_RIT_Init(LPC_RITIMER);
 	NVIC_SetPriority( RITIMER_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1 );
 
-	/* Calibrate stepper */
-	stepperDriver.calibrate();
+	stepperDriver = new StepperDriver();
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
