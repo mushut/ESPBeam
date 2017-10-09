@@ -28,6 +28,7 @@ using namespace std;
 #include "GCodeParser.h"
 #include "StepperDriver.h"
 #include "Semaphore.h"
+#include "Servo.h"
 
 // TODO: insert other definitions and declarations here
 struct commandEvent{
@@ -36,6 +37,7 @@ struct commandEvent{
 
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
 StepperDriver *stepperDriver;
+Servo *servo;
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
@@ -69,8 +71,7 @@ void executeCommand(GCommand &cmd) {
 
 	// Servo
 	case M1:
-		if(strcmp(cmd.penState, "90"))/*pin.write(true)*/;
-		else if(strcmp(cmd.penState, "160"))/*pin.write(false)*/;
+		servo->rotate(cmd.penState);
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 
@@ -197,6 +198,7 @@ int main(void) {
 	NVIC_SetPriority( RITIMER_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1 );
 
 	stepperDriver = new StepperDriver();
+	servo = new Servo();
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
