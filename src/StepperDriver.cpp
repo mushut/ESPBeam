@@ -5,6 +5,7 @@
  *      Author: Eibl-PC
  */
 
+#include <math.h>
 #include "StepperDriver.h"
 
 xSemaphoreHandle sbRIT = xSemaphoreCreateBinary();
@@ -35,6 +36,8 @@ int xStepCount;
 int yStepCount;
 int x;
 int y;
+int prev_x = 0;
+int prev_y = 0;
 
 /* Start timer */
 void RIT_start(int count, int us)
@@ -91,7 +94,105 @@ void RIT_IRQHandler(void)
 		/* Running */
 		if(isRunning) {
 
+			double realX1;	// millimeter value
+			double realX2;	// millimeter value
+			double realY1;	// millimeter value
+			double realY2;	// millimeter value
+			double delta_realX = realX2 - realX1;
+			double delta_realY = realY2 - realY1;
 
+			double StepperResolution;	// Resolution gathered from calibration information
+			int appX1 = (int)round(realX1/StepperResolution);
+			int appX2 = (int)round(realX2/StepperResolution);
+			int appY1 = (int)round(realY1/StepperResolution);
+			int appY2 = (int)round(realY2/StepperResolution);
+			int delta_appX = appX2 - appX1;
+			int delta_appY = appY2 - appY1;
+			double app_slope = 0;
+
+			bool directionX = 0;
+			bool directionY = 0;
+
+			int currentY = appY1;
+			int currentX = appX1;
+
+			// Direction
+			if (delta_appX > 0) {
+				directionX = true;
+			}
+			else if (delta_appX < 0) {
+				directionX = false;
+			}
+
+			if (delta_appY > 0) {
+				directionY = true;
+			}
+			else if (delta_appY < 0) {
+				directionY = false;
+			}
+
+			// Up or down
+			if (delta_appX == 0) {
+				// Drive only up or down
+			}
+
+			// Left or right
+			if (delta_appY == 0) {
+				// Drive only left or right
+			}
+
+			// Diagonal movement
+			if (delta_appX != 0) {
+				app_slope = ((double)delta_appY) / delta_appX;
+
+				if (app_slope > 1 || app_slope < -1) {
+					// drive x before y
+
+					// LOOP
+					int i = 0
+					while (i < delta_appX) {
+						if (i == 0) {
+							driveX();
+							i++;
+							currentX++;
+						}
+						else {
+							if ((currentY - (delta_realY / delta_realX) * currentX + (realY1 - delta_realY * realX1 / delta_realX)) > 0) {
+								driveY();
+								currentY++;
+							}
+							driveX();
+							i++;
+							currentX++;
+						}
+					}
+				}
+				else if (app_slope < 1 && app_slope > -1) {
+					// drive y before x
+
+					int i = 0
+					while (i < delta_appY) {
+						if (i == 0) {
+							driveY();
+							i++;
+							currentY++;
+						}
+						else {
+							if ((currentX - (currentY - realY1 - delta_realY * realX1 / delta_realX) * delta_realX / delta_realY) > 0) {
+								driveY();
+								currentY++;
+							}
+							driveX();
+							i++;
+							currentX++;
+						}
+					}
+				}
+			}
+
+			// Last commands
+			prev_x = x;
+			prev_y = y;
 		}
 
 		/* Calibration */
