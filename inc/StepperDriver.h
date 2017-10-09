@@ -21,6 +21,7 @@ public:
 	virtual ~StepperDriver();
 	void plot(Point point);
 	void calibrate();
+	bool checkLimits();
 };
 
 #endif /* STEPPERDRIVER_H_ */

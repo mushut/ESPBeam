@@ -87,13 +87,10 @@ void executeCommand(GCommand &cmd) {
 	// Stepper
 	case G1:
 	{
-		char temp[] = "Distance = x\n";
 
 		//Run the stepper
 		stepperDriver->plot(cmd.point);
-		vTaskDelay(5); //This is to simulate the delay caused by the actual stepping for mDraw
 
-		USB_send((uint8_t *)temp, sizeof(temp));
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
