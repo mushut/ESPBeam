@@ -90,7 +90,7 @@ void executeCommand(GCommand &cmd) {
 
 		//Run the stepper
 		stepperDriver->plot(cmd.point);
-
+		vTaskDelay(5);
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
