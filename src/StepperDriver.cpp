@@ -255,10 +255,10 @@ void RIT_IRQHandler(void)
 /* Constructor */
 StepperDriver::StepperDriver() {
 
-	xLimit1 = new DigitalIoPin(1, 9, DigitalIoPin::pullup, true);
-	xLimit2 = new DigitalIoPin(1, 10, DigitalIoPin::pullup, true);
-	xStep = new DigitalIoPin(0, 9, DigitalIoPin::output, false);
-	xDir = new DigitalIoPin(0, 29, DigitalIoPin::output, false);
+	xLimit1 = new DigitalIoPin(0, 6, DigitalIoPin::pullup, true);
+	xLimit2 = new DigitalIoPin(0, 7, DigitalIoPin::pullup, true);
+	xStep = new DigitalIoPin(1, 8, DigitalIoPin::output, false);
+	xDir = new DigitalIoPin(0, 5, DigitalIoPin::output, false);
 
 	yLimit1 = new DigitalIoPin(0, 27, DigitalIoPin::pullup, true);
 	yLimit2 = new DigitalIoPin(0, 28, DigitalIoPin::pullup, true);
