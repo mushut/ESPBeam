@@ -78,7 +78,7 @@ void executeCommand(GCommand &cmd) {
 		// Initialisation
 	case M10:
 	{
-		char m10[] = "M10 XY 380 310 0.00 0.00 A0 B0 H0 S80 U160 D90\n";
+		char m10[] = "M10 XY 380 310 0.00 0.00 A1 B1 H0 S80 U160 D90\n";
 		USB_send((uint8_t *)m10, sizeof(m10));
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
@@ -111,7 +111,8 @@ void executeCommand(GCommand &cmd) {
 static void usb_read(void *pvParameters) {
 
 	/* Calibrate stepper */
-	stepperDriver->calibrate();
+	servo->rotate("160");		// Drive pen up
+	stepperDriver->calibrate(); // Calibrate
 
 	/* Initialise variables */
 	char buffer[30] = {0};

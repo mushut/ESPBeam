@@ -41,11 +41,13 @@ Servo::~Servo() {
 
 void Servo::rotate(char* angle) {
 
+	// Down
 	if(strcmp(angle, "90") == 0) {
-		LPC_SCTLARGE0->MATCHREL[1].L = 2200;
+		LPC_SCTLARGE0->MATCHREL[1].L = 3000;
 	}
 
+	// Up
 	else if(strcmp(angle, "160") == 0) {
-		LPC_SCTLARGE0->MATCHREL[1].L = 3000;
+		LPC_SCTLARGE0->MATCHREL[1].L = 2200;
 	}
 }

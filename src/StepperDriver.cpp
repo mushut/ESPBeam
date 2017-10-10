@@ -69,6 +69,9 @@ bool directionY = 0;
 int currentY = 0;
 int currentX = 0;
 
+int i = 0;
+int j = 0;
+
 /* Start timer */
 void RIT_start(int count, int us)
 {
@@ -111,10 +114,10 @@ void RIT_update(int us) {
 
 /* Check all limit switches */
 bool checkLimits() {
-	if(xLimit1->read() && xStepperDir == true) return false;
-	else if(xLimit2->read() && xStepperDir == false) return false;
-	else if(yLimit1->read() && yStepperDir == true) return false;
-	else if(yLimit2->read() && yStepperDir == false) return false;
+	if(xLimit1->read() && xStepperDir == false) return false;
+	else if(xLimit2->read() && xStepperDir == true) return false;
+	else if(yLimit1->read() && yStepperDir == false) return false;
+	else if(yLimit2->read() && yStepperDir == true) return false;
 	else return true;
 }
 
@@ -136,69 +139,88 @@ void RIT_IRQHandler(void)
 			/* Check if any limit is triggered */
 			if(checkLimits()){
 
-				switch(direction) {
+				double slope = delta_realY / delta_realX;
+				double realY0 = realY1 - slope * realX1;
+				double yDifference = currentY - slope * currentX + realY0;
+				double xDifference = currentX - (currentY - realY0) / slope;
 
+				switch(direction) {
 				case vertical:
-					if((delta_appY * 2) > 0) {
+					if(j < delta_appY * 2) {
 						yStep->write(yStepperPulse);
 						yStepperPulse = !yStepperPulse;
-						currentY++;
-						delta_appY--;
+
+						if(directionY) currentY++;
+						else currentY--;
+
+						j++;
 					}
 					else {
-						delta_appX = 0;
+						i = delta_appX;
 					}
 					break;
 
 				case x_oriented:
-					if((delta_appX * 2) > 0) {
+					if(i < delta_appX * 2) {
 
-						if ((currentY - (delta_realY / delta_realX) * currentX + (realY1 - delta_realY * realX1 / delta_realX)) <= 0) {
+						if (yDifference <= 0) {
 							yStep->write(yStepperPulse);
 							yStepperPulse = !yStepperPulse;
 
-							currentY++;
-							delta_appY--;
+							// Change current position depending on the direction
+							if(directionY) currentY++;
+							else currentY--;
+
+							j++;
 						}
 						xStep->write(xStepperPulse);
 						xStepperPulse = !xStepperPulse;
 
-						currentX++;
-						delta_appX--;
+						// Change current position depending on the direction
+						if(directionX) currentX++;
+						else currentX--;
+
+						i++;
 					}
 					else {
-						if(delta_appY != 0){
-							delta_appY = 0;
+						if(j != delta_appY){
+							j = delta_appY;
 						}
 					}
 					break;
 
 				case y_oriented:
-					if((delta_appY * 2) > 0) {
+					if(j < delta_appY * 2) {
 
-						if ((currentX - (currentY - realY1 - delta_realY * realX1 / delta_realX) * delta_realX / delta_realY) <= 0) {
+						if (xDifference <= 0) {
 							xStep->write(xStepperPulse);
 							xStepperPulse = !xStepperPulse;
 
-							currentX++;
-							delta_appX--;
+							// Change current position depending on the direction
+							if(directionX) currentX++;
+							else currentX--;
+
+							i++;
 						}
 						yStep->write(yStepperPulse);
 						yStepperPulse = !yStepperPulse;
 
-						currentY++;
-						delta_appY--;
+						// Change current position depending on the direction
+						if(directionY) currentY++;
+						else currentY--;
+
+						j++;
 					}
 					else {
-						if(delta_appX != 0){
-							delta_appX = 0;
+						if(i != delta_appX){
+							i = delta_appX;
 						}
 					}
 					break;
 				}
 			}
 
-			if(delta_appX == 0 && delta_appY == 0) {
+			if(i >= delta_appX && j >= delta_appY) {
 				RIT_running = false;
 			}
 		}
@@ -215,17 +237,17 @@ void RIT_IRQHandler(void)
 				xStepperPulse = !xStepperPulse;
 
 				// Run to both ends
-				if(xLimit1->read() && (xStepperDir == true)){
-					xTotalSteps = xStepCount;
-					xStepCount = 0;
-					xLimitsHit++;
-					xStepperDir = false;
-				}
-				else if(xLimit2->read() && (xStepperDir == false)) {
+				if(xLimit1->read() && (xStepperDir == false)){
 					xTotalSteps = xStepCount;
 					xStepCount = 0;
 					xLimitsHit++;
 					xStepperDir = true;
+				}
+				else if(xLimit2->read() && (xStepperDir == true)) {
+					xTotalSteps = xStepCount;
+					xStepCount = 0;
+					xLimitsHit++;
+					xStepperDir = false;
 				}
 
 				xStepCount++;
@@ -240,17 +262,17 @@ void RIT_IRQHandler(void)
 				yStepperPulse = !yStepperPulse;
 
 				// Run to both ends
-				if(yLimit1->read() && (yStepperDir == true)){
-					yTotalSteps = yStepCount;
-					yStepCount = 0;
-					yLimitsHit++;
-					yStepperDir = false;
-				}
-				else if(yLimit2->read() && (yStepperDir == false)) {
+				if(yLimit1->read() && (yStepperDir == false)){
 					yTotalSteps = yStepCount;
 					yStepCount = 0;
 					yLimitsHit++;
 					yStepperDir = true;
+				}
+				else if(yLimit2->read() && (yStepperDir == true)) {
+					yTotalSteps = yStepCount;
+					yStepCount = 0;
+					yLimitsHit++;
+					yStepperDir = false;
 				}
 
 				yStepCount++;
@@ -276,13 +298,13 @@ void RIT_IRQHandler(void)
 /* Constructor */
 StepperDriver::StepperDriver() {
 
-	xLimit1 = new DigitalIoPin(0, 6, DigitalIoPin::pullup, true);
-	xLimit2 = new DigitalIoPin(0, 7, DigitalIoPin::pullup, true);
-	xStep = new DigitalIoPin(1, 8, DigitalIoPin::output, false);
-	xDir = new DigitalIoPin(0, 5, DigitalIoPin::output, false);
+	xLimit1 = new DigitalIoPin(1, 3, DigitalIoPin::pullup, true);
+	xLimit2 = new DigitalIoPin(0, 0, DigitalIoPin::pullup, true);
+	xStep = new DigitalIoPin(0, 27, DigitalIoPin::output, false);
+	xDir = new DigitalIoPin(0, 28, DigitalIoPin::output, false);
 
-	yLimit1 = new DigitalIoPin(0, 27, DigitalIoPin::pullup, true);
-	yLimit2 = new DigitalIoPin(0, 28, DigitalIoPin::pullup, true);
+	yLimit1 = new DigitalIoPin(0, 29, DigitalIoPin::pullup, true);
+	yLimit2 = new DigitalIoPin(0, 9, DigitalIoPin::pullup, true);
 	yStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
 	yDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
 
@@ -293,7 +315,7 @@ StepperDriver::StepperDriver() {
 	xStepperPulse = true;
 	yStepperPulse = true;
 
-	initTime = 700;
+	initTime = 150;
 	xTotalSteps = 0;
 	yTotalSteps = 0;
 	xLimitsHit = 0;
@@ -313,8 +335,8 @@ void StepperDriver::plot(Point point) {
 
 	realX2 = point.getPointX() / stepperResolution;	// millimeter value
 	realY2 = point.getPointY() / stepperResolution;	// millimeter value
-	delta_realX = abs(realX2) - abs(realX1);
-	delta_realY = abs(realY2) - abs(realY1);
+	delta_realX = realX2 - realX1;
+	delta_realY = realY2 - realY1;
 
 	appX1 = (int)round(realX1);
 	appX2 = (int)round(realX2);
@@ -345,12 +367,10 @@ void StepperDriver::plot(Point point) {
 	yDir->write(directionY);
 
 	// Convert values to absolute values
-	appX1 = abs(appX1);
-	appX2 = abs(appX2);
-	appY1 = abs(appY1);
-	appY2 = abs(appY2);
-	delta_appX = abs(delta_appX);
-	delta_appY = abs(delta_appY);
+//	delta_appX = abs(delta_appX);
+//	delta_appY = abs(delta_appY);
+//	delta_realX = abs(delta_realX);
+//	delta_realY = abs(delta_realY);
 
 	// Up or down
 	if (delta_appX == 0) {
@@ -361,7 +381,7 @@ void StepperDriver::plot(Point point) {
 	else if (delta_appX != 0) {
 		app_slope = ((double)delta_appY) / delta_appX;
 
-		if (app_slope > 1 || app_slope < -1) {
+		if (app_slope >= 1 || app_slope <= -1) {
 			direction = y_oriented;
 		}
 
@@ -374,9 +394,10 @@ void StepperDriver::plot(Point point) {
 
 	RIT_start(10000, initTime);
 
-
 	realX1 = realX2;
 	realY1 = realY2;
+	i = 0;
+	j = 0;
 }
 
 /* Calibrate plotter */
@@ -386,8 +407,7 @@ void StepperDriver::calibrate() {
 
 	RIT_start(10000, initTime);
 
-	stepperResolution = (248.0 / ((xTotalSteps + yTotalSteps) / 2));
-	stepperResolution *= 4;
+	stepperResolution = (((380.0 / xTotalSteps) + (310.0 / yTotalSteps)) / 2);
 
 	isCalibrating = false;
 	isRunning = true;
