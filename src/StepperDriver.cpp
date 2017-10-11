@@ -141,12 +141,15 @@ void RIT_IRQHandler(void)
 
 				double slope = delta_realY / delta_realX;
 				double realY0 = realY1 - slope * realX1;
-				double yDifference = currentY - slope * currentX + realY0;
+				double yDifference = currentY - (slope * currentX + realY0);
 				double xDifference = currentX - (currentY - realY0) / slope;
+
+				if(directionY == false) yDifference = -yDifference;
+				if(directionX == false) xDifference = -xDifference;
 
 				switch(direction) {
 				case vertical:
-					if(j < delta_appY * 2) {
+					if(j < abs(delta_appY) * 2) {
 						yStep->write(yStepperPulse);
 						yStepperPulse = !yStepperPulse;
 
@@ -161,7 +164,7 @@ void RIT_IRQHandler(void)
 					break;
 
 				case x_oriented:
-					if(i < delta_appX * 2) {
+					if(i < abs(delta_appX) * 2) {
 
 						if (yDifference <= 0) {
 							yStep->write(yStepperPulse);
@@ -184,13 +187,13 @@ void RIT_IRQHandler(void)
 					}
 					else {
 						if(j != delta_appY){
-							j = delta_appY;
+							j = abs(delta_appY);
 						}
 					}
 					break;
 
 				case y_oriented:
-					if(j < delta_appY * 2) {
+					if(j < abs(delta_appY) * 2) {
 
 						if (xDifference <= 0) {
 							xStep->write(xStepperPulse);
@@ -213,14 +216,14 @@ void RIT_IRQHandler(void)
 					}
 					else {
 						if(i != delta_appX){
-							i = delta_appX;
+							i = abs(delta_appX);
 						}
 					}
 					break;
 				}
 			}
 
-			if(i >= delta_appX && j >= delta_appY) {
+			if(i >= abs(delta_appX) && j >= abs(delta_appY)) {
 				RIT_running = false;
 			}
 		}
@@ -298,15 +301,15 @@ void RIT_IRQHandler(void)
 /* Constructor */
 StepperDriver::StepperDriver() {
 
-	xLimit1 = new DigitalIoPin(1, 3, DigitalIoPin::pullup, true);
-	xLimit2 = new DigitalIoPin(0, 0, DigitalIoPin::pullup, true);
-	xStep = new DigitalIoPin(0, 27, DigitalIoPin::output, false);
-	xDir = new DigitalIoPin(0, 28, DigitalIoPin::output, false);
+	yLimit1 = new DigitalIoPin(1, 3, DigitalIoPin::pullup, true);
+	yLimit2 = new DigitalIoPin(0, 0, DigitalIoPin::pullup, true);
+	yStep = new DigitalIoPin(0, 27, DigitalIoPin::output, false);
+	yDir = new DigitalIoPin(0, 28, DigitalIoPin::output, false);
 
-	yLimit1 = new DigitalIoPin(0, 29, DigitalIoPin::pullup, true);
-	yLimit2 = new DigitalIoPin(0, 9, DigitalIoPin::pullup, true);
-	yStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
-	yDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
+	xLimit1 = new DigitalIoPin(0, 29, DigitalIoPin::pullup, true);
+	xLimit2 = new DigitalIoPin(0, 9, DigitalIoPin::pullup, true);
+	xStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
+	xDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
 
 	isCalibrating = true;
 	isRunning = false;
@@ -315,7 +318,7 @@ StepperDriver::StepperDriver() {
 	xStepperPulse = true;
 	yStepperPulse = true;
 
-	initTime = 150;
+	initTime = 75;
 	xTotalSteps = 0;
 	yTotalSteps = 0;
 	xLimitsHit = 0;
@@ -405,9 +408,9 @@ void StepperDriver::calibrate() {
 	isCalibrating = true;
 	isRunning = false;
 
-	RIT_start(10000, initTime);
+	RIT_start(10000, 150);
 
-	stepperResolution = (((380.0 / xTotalSteps) + (310.0 / yTotalSteps)) / 2);
+	stepperResolution = (((310.0 / xTotalSteps) + (380.0 / yTotalSteps)) / 2);
 
 	isCalibrating = false;
 	isRunning = true;

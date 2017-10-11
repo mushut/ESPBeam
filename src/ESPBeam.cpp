@@ -90,7 +90,6 @@ void executeCommand(GCommand &cmd) {
 
 		//Run the stepper
 		stepperDriver->plot(cmd.point);
-		vTaskDelay(5);
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
@@ -102,6 +101,7 @@ void executeCommand(GCommand &cmd) {
 
 		// Default case
 	default:
+		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
 }
@@ -155,9 +155,6 @@ static void usb_read(void *pvParameters) {
 		memset(buffer, 0, sizeof(buffer));
 		memset(e.command, 0, sizeof(e.command));
 		y = 0;
-
-		// Delay
-		vTaskDelay(1);
 	}
 }
 
@@ -173,12 +170,14 @@ static void stepper_driver(void *pvParameters) {
 	while(1) {
 
 		// Try to receive item from queue
-		while(xQueueReceive(xQueue, &e, portMAX_DELAY)) {
+		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 3)) {
 
 			// Command execution
 			command = *(parser.parseGCode(e.command));	// Parse given command into a Command object
 			executeCommand(command);					// Execute given command
-			vTaskDelay(1);								// Delay
+		}
+		else {
+			USB_send((uint8_t *)"OK\n", 3);
 		}
 
 		// Delay
@@ -200,12 +199,12 @@ int main(void) {
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
-			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 
 	/* Stepper driver -thread */
 	xTaskCreate(stepper_driver, "stepper_driver",
-			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 
 	/* CDC Task */
