@@ -149,12 +149,15 @@ void RIT_IRQHandler(void)
 
 				switch(direction) {
 				case vertical:
-					if(j < abs(delta_appY) * 2) {
+					if(j < abs(delta_appY)) {
 						yStep->write(yStepperPulse);
 						yStepperPulse = !yStepperPulse;
 
-						if(directionY) currentY++;
-						else currentY--;
+						if(delta_appY != 0) {
+							if(directionY) currentY++;
+							else currentY--;
+						}
+
 
 						j++;
 					}
@@ -164,7 +167,7 @@ void RIT_IRQHandler(void)
 					break;
 
 				case x_oriented:
-					if(i < abs(delta_appX) * 2) {
+					if(i < abs(delta_appX)) {
 
 						if (yDifference <= 0) {
 							yStep->write(yStepperPulse);
@@ -186,14 +189,21 @@ void RIT_IRQHandler(void)
 						i++;
 					}
 					else {
-						if(j != delta_appY){
-							j = abs(delta_appY);
+						if(j < abs(delta_appY)){
+							yStep->write(yStepperPulse);
+							yStepperPulse = !yStepperPulse;
+
+							// Change current position depending on the direction
+							if(directionY) currentY++;
+							else currentY--;
+
+							j++;
 						}
 					}
 					break;
 
 				case y_oriented:
-					if(j < abs(delta_appY) * 2) {
+					if(j < abs(delta_appY)) {
 
 						if (xDifference <= 0) {
 							xStep->write(xStepperPulse);
@@ -215,8 +225,16 @@ void RIT_IRQHandler(void)
 						j++;
 					}
 					else {
-						if(i != delta_appX){
-							i = abs(delta_appX);
+						if(i < abs(delta_appX)){
+
+							xStep->write(xStepperPulse);
+							xStepperPulse = !xStepperPulse;
+
+							// Change current position depending on the direction
+							if(directionX) currentX++;
+							else currentX--;
+
+							i++;
 						}
 					}
 					break;
@@ -318,7 +336,7 @@ StepperDriver::StepperDriver() {
 	xStepperPulse = true;
 	yStepperPulse = true;
 
-	initTime = 75;
+	initTime = 150;
 	xTotalSteps = 0;
 	yTotalSteps = 0;
 	xLimitsHit = 0;
@@ -336,8 +354,8 @@ StepperDriver::~StepperDriver() {
 /* Plot */
 void StepperDriver::plot(Point point) {
 
-	realX2 = point.getPointX() / stepperResolution;	// millimeter value
-	realY2 = point.getPointY() / stepperResolution;	// millimeter value
+	realX2 = point.getPointX() / stepperResolution;	// Steps
+	realY2 = point.getPointY() / stepperResolution;	// Steps
 	delta_realX = realX2 - realX1;
 	delta_realY = realY2 - realY1;
 
@@ -370,10 +388,10 @@ void StepperDriver::plot(Point point) {
 	yDir->write(directionY);
 
 	// Convert values to absolute values
-//	delta_appX = abs(delta_appX);
-//	delta_appY = abs(delta_appY);
-//	delta_realX = abs(delta_realX);
-//	delta_realY = abs(delta_realY);
+	//	delta_appX = abs(delta_appX);
+	//	delta_appY = abs(delta_appY);
+	//	delta_realX = abs(delta_realX);
+	//	delta_realY = abs(delta_realY);
 
 	// Up or down
 	if (delta_appX == 0) {
