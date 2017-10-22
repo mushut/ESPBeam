@@ -18,9 +18,8 @@
 
 using namespace std;
 
+/* Includes */
 #include <cr_section_macros.h>
-
-// TODO: insert other include files here
 #include "FreeRTOS.h"
 #include "task.h"
 #include "ITM_write.h"
@@ -30,10 +29,11 @@ using namespace std;
 #include "Semaphore.h"
 #include "Servo.h"
 
+/* Macros */
 #define LIMIT_X 250
 #define LIMIT_Y 350
 
-// TODO: insert other definitions and declarations here
+/* Global Variables */
 struct commandEvent{
 	char command[30];
 };
@@ -41,18 +41,18 @@ struct commandEvent{
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
 StepperDriver *stepperDriver;
 Servo *servo;
-
 bool isOffLimits = false;
+char penUp[5] = "160";
+char penDown[5] = "90";
+
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
-
 void vConfigureTimerForRunTimeStats( void ) {
 	Chip_SCT_Init(LPC_SCTSMALL1);
 	LPC_SCTSMALL1->CONFIG = SCT_CONFIG_32BIT_COUNTER;
 	LPC_SCTSMALL1->CTRL_U = SCT_CTRL_PRE_L(255) | SCT_CTRL_CLRCTR_L; // set prescaler to 256 (255 + 1), and start timer
 }
-
 }
 /* end runtime statictics collection */
 
@@ -67,9 +67,11 @@ static void prvSetupHardware(void)
 
 }
 
+
+/* Public Functions */
+/* Check command validity */
 bool checkCommand(GCommand &cmd) {
 
-	// Check if given command is within the limits
 	if(cmd.point.getPointX() <= LIMIT_X &&
 			cmd.point.getPointY() <= LIMIT_Y &&
 			cmd.point.getPointX() >= 0 &&
@@ -79,7 +81,7 @@ bool checkCommand(GCommand &cmd) {
 	return false;
 }
 
-/* Public Functions */
+/* Execute command */
 void executeCommand(GCommand &cmd) {
 	char ok[] = "OK\n";
 
@@ -118,12 +120,12 @@ void executeCommand(GCommand &cmd) {
 			// Check flag
 			if(isOffLimits) {
 				isOffLimits = false;	// Reset flag
-				servo->rotate("90"); 	// Drive pen down
+				servo->rotate(penDown); // Drive pen down
 				vTaskDelay(300);		// Delay
 			}
 		}
 		else{
-			servo->rotate("160");		// Drive pen up
+			servo->rotate(penUp);		// Drive pen up
 			isOffLimits = true;			// Set flag
 		}
 
@@ -155,11 +157,12 @@ void executeCommand(GCommand &cmd) {
 }
 /********************/
 
-/* USB Read -thread */
-static void usb_read(void *pvParameters) {
+
+/* Read Command -Task*/
+static void read_task(void *pvParameters) {
 
 	/* Calibrate stepper */
-	servo->rotate("160");		// Drive pen up
+	servo->rotate(penUp);		// Drive pen up
 	stepperDriver->calibrate(); // Calibrate
 
 	/* Initialise variables */
@@ -206,8 +209,8 @@ static void usb_read(void *pvParameters) {
 	}
 }
 
-/* Stepper driver -thread */
-static void stepper_driver(void *pvParameters) {
+/* Execute Command -Task */
+static void execute_task(void *pvParameters) {
 
 	/* Initialise */
 	commandEvent e;
@@ -226,7 +229,7 @@ static void stepper_driver(void *pvParameters) {
 		}
 
 		else {
-			// Reset plotter position
+			// Reset plotter position if no commands received for a second
 			stepperDriver->reset();
 		}
 
@@ -235,25 +238,24 @@ static void stepper_driver(void *pvParameters) {
 	}
 }
 
-
+/* Main */
 int main(void) {
 
+	/* Initialisation */
 	prvSetupHardware();
-
 	ITM_init();
 	Chip_RIT_Init(LPC_RITIMER);
 	NVIC_SetPriority( RITIMER_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1 );
-
 	stepperDriver = new StepperDriver();
 	servo = new Servo();
 
-	/* Read USB -thread */
-	xTaskCreate(usb_read, "usb_read",
+	/* Read Command -Task*/
+	xTaskCreate(read_task, "read_task",
 			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 
-	/* Stepper driver -thread */
-	xTaskCreate(stepper_driver, "stepper_driver",
+	/* Execute Command -Task */
+	xTaskCreate(execute_task, "execute_task",
 			configMINIMAL_STACK_SIZE * 7, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 

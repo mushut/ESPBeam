@@ -5,7 +5,9 @@
  *      Author: Eibl-PC
  */
 
+using namespace std;
 
+/* Includes */
 #include "DigitalIoPin.h"
 #include <math.h>
 #include <stdlib.h>
@@ -17,14 +19,13 @@
 #include "semphr.h"
 #include "Servo.h"
 
-using namespace std;
-
 enum driveDirection {
 	vertical,
 	y_oriented,
 	x_oriented
 };
 
+/* Global variables */
 xSemaphoreHandle sbRIT = xSemaphoreCreateBinary();
 static bool RIT_running;
 
@@ -380,7 +381,6 @@ StepperDriver::StepperDriver() {
 
 /* Destructor */
 StepperDriver::~StepperDriver() {
-	// TODO Auto-generated destructor stub
 }
 
 /* Plot */
@@ -439,6 +439,8 @@ void StepperDriver::plot(Point point) {
 
 	RIT_running = true;
 
+	// Set "speed" depending on pen position //
+	// Works only on servo-only plotter //
 	if(Servo::isDown()) setTime(130);
 	else setTime(70);
 
@@ -471,10 +473,12 @@ void StepperDriver::calibrate() {
 	isRunning = true;
 }
 
+/* Set time for RIT */
 void StepperDriver::setTime(int time) {
 	microSeconds = time;
 }
 
+/* Reset plotter position */
 void StepperDriver::reset() {
 	isRunning = false;
 	isResetting = true;
