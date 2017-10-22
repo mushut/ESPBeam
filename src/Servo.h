@@ -18,6 +18,7 @@ class Servo {
 public:
 	Servo();
 	virtual ~Servo();
+	void SCT_Init();
 	void rotate(char* angle);
 	static bool isDown();
 private:

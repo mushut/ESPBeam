@@ -28,6 +28,7 @@ using namespace std;
 #include "StepperDriver.h"
 #include "Semaphore.h"
 #include "Servo.h"
+#include "string.h"
 
 /* Macros */
 #define LIMIT_X 250

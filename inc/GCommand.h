@@ -11,18 +11,17 @@
 #include "Point.h"
 
 enum code{
-	M1,
-	M10,
-	G1,
-	G28,
-	M4,
-	CLR
+	M1,		// Servo
+	M10,	// Init
+	G1,		// Plot
+	G28,	// Unknown
+	M4,		// Laser
+	CLR		// Default
 };
 
 struct GCommand {
 	code gCodeCommand;
 	Point point;
-	char pin[10];
 	char penState[10];
 };
 

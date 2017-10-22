@@ -6,15 +6,18 @@
  */
 
 #include "GCodeParser.h"
+#include <Cstring>
+#include "stdlib.h"
+
+using namespace std;
 
 GCodeParser::GCodeParser() {
-	gCommandParts.clear();
 }
 
 GCodeParser::~GCodeParser() {
 }
 
-GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
+GCommand *GCodeParser::parseGCode(char input[]) {
 
 	int i = 0,
 			j = 0,
@@ -22,11 +25,11 @@ GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 	char code[6][10] = {0};
 
 	// Parse until end of input
-	for(i = 0; gCodeRaw[i] != 0; i++) {
+	for(i = 0; input[i] != 0; i++) {
 
 		// Put chars in array until "\n" or space is read
-		if(gCodeRaw[i] != 10 && gCodeRaw[i] != 32) {
-			code[x][j++] = gCodeRaw[i];
+		if(input[i] != 10 && input[i] != 32) {
+			code[x][j++] = input[i];
 		}
 
 		// Write code to pointer array and reset code value
