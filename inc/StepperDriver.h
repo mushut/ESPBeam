@@ -16,8 +16,8 @@ public:
 	virtual ~StepperDriver();
 	void plot(Point point);
 	void calibrate();
-	static void setTime(int time);
 	void reset();
+	static void setTime(int time);
 private:
 	char report[96];
 };

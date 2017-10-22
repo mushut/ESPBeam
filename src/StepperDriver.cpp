@@ -25,9 +25,15 @@ enum driveDirection {
 	x_oriented
 };
 
+enum plotterMode {
+	running,
+	calibrating,
+	resetting,
+	idle
+};
+
 /* Global variables */
 xSemaphoreHandle sbRIT = xSemaphoreCreateBinary();
-static bool RIT_running;
 
 DigitalIoPin *xLimit1;
 DigitalIoPin *xLimit2;
@@ -82,15 +88,16 @@ int currentX = 0;
 int i = 0;
 int j = 0;
 
+plotterMode mode = idle;
+
 /* Start timer */
-void RIT_start(int count, int us)
+void RIT_start(int us)
 {
 	uint64_t cmp_value;
 	// Determine approximate compare value based on clock rate and passed interval
 	cmp_value = (uint64_t) Chip_Clock_GetSystemClockRate() * (uint64_t) us / 1000000;
 	// disable timer during configuration
 	Chip_RIT_Disable(LPC_RITIMER);
-	RIT_running = true;
 	// enable automatic clear on when compare value==timer value
 	// this makes interrupts trigger periodically
 	Chip_RIT_EnableCompClear(LPC_RITIMER);
@@ -141,90 +148,44 @@ void RIT_IRQHandler(void)
 	// Timer then removes the IRQ until next match occurs
 	Chip_RIT_ClearIntStatus(LPC_RITIMER); // clear IRQ flag
 
-	if(RIT_running) {
+	switch(mode) {
 
-		/* Running */
-		if(isRunning) {
+	case running:
+	{
+		/* Check if any limit is triggered */
+		if(checkLimits()){
 
-			/* Check if any limit is triggered */
-			if(checkLimits()){
+			double slope = delta_realY / delta_realX;
+			double realY0 = realY1 - slope * realX1;
+			double yDifference = currentY - (slope * currentX + realY0);
+			double xDifference = currentX - (currentY - realY0) / slope;
 
-				double slope = delta_realY / delta_realX;
-				double realY0 = realY1 - slope * realX1;
-				double yDifference = currentY - (slope * currentX + realY0);
-				double xDifference = currentX - (currentY - realY0) / slope;
+			if(directionY == false) yDifference = -yDifference;
+			if(directionX == false) xDifference = -xDifference;
 
-				if(directionY == false) yDifference = -yDifference;
-				if(directionX == false) xDifference = -xDifference;
+			switch(direction) {
+			case vertical:
+				if(j < abs(delta_appY)) {
+					yStep->write(yStepperPulse);
+					yStepperPulse = !yStepperPulse;
 
-				switch(direction) {
-				case vertical:
-					if(j < abs(delta_appY)) {
-						yStep->write(yStepperPulse);
-						yStepperPulse = !yStepperPulse;
-
-						if(delta_appY != 0) {
-							if(directionY) currentY++;
-							else currentY--;
-						}
-
-
-						j++;
+					if(delta_appY != 0) {
+						if(directionY) currentY++;
+						else currentY--;
 					}
-					else {
-						i = delta_appX;
-					}
-					break;
 
-				case x_oriented:
-					if(i < abs(delta_appX)) {
 
-						if (yDifference <= 0) {
-							yStep->write(yStepperPulse);
-							yStepperPulse = !yStepperPulse;
+					j++;
+				}
+				else {
+					i = delta_appX;
+				}
+				break;
 
-							// Change current position depending on the direction
-							if(directionY) currentY++;
-							else currentY--;
+			case x_oriented:
+				if(i < abs(delta_appX)) {
 
-							j++;
-						}
-						xStep->write(xStepperPulse);
-						xStepperPulse = !xStepperPulse;
-
-						// Change current position depending on the direction
-						if(directionX) currentX++;
-						else currentX--;
-
-						i++;
-					}
-					else {
-						if(j < abs(delta_appY)){
-							yStep->write(yStepperPulse);
-							yStepperPulse = !yStepperPulse;
-
-							// Change current position depending on the direction
-							if(directionY) currentY++;
-							else currentY--;
-
-							j++;
-						}
-					}
-					break;
-
-				case y_oriented:
-					if(j < abs(delta_appY)) {
-
-						if (xDifference <= 0) {
-							xStep->write(xStepperPulse);
-							xStepperPulse = !xStepperPulse;
-
-							// Change current position depending on the direction
-							if(directionX) currentX++;
-							else currentX--;
-
-							i++;
-						}
+					if (yDifference <= 0) {
 						yStep->write(yStepperPulse);
 						yStepperPulse = !yStepperPulse;
 
@@ -234,115 +195,163 @@ void RIT_IRQHandler(void)
 
 						j++;
 					}
-					else {
-						if(i < abs(delta_appX)){
+					xStep->write(xStepperPulse);
+					xStepperPulse = !xStepperPulse;
 
-							xStep->write(xStepperPulse);
-							xStepperPulse = !xStepperPulse;
+					// Change current position depending on the direction
+					if(directionX) currentX++;
+					else currentX--;
 
-							// Change current position depending on the direction
-							if(directionX) currentX++;
-							else currentX--;
-
-							i++;
-						}
-					}
-					break;
+					i++;
 				}
-			}
+				else {
+					if(j < abs(delta_appY)){
+						yStep->write(yStepperPulse);
+						yStepperPulse = !yStepperPulse;
 
-			if(i >= abs(delta_appX) && j >= abs(delta_appY)) {
-				RIT_running = false;
+						// Change current position depending on the direction
+						if(directionY) currentY++;
+						else currentY--;
+
+						j++;
+					}
+				}
+				break;
+
+			case y_oriented:
+				if(j < abs(delta_appY)) {
+
+					if (xDifference <= 0) {
+						xStep->write(xStepperPulse);
+						xStepperPulse = !xStepperPulse;
+
+						// Change current position depending on the direction
+						if(directionX) currentX++;
+						else currentX--;
+
+						i++;
+					}
+					yStep->write(yStepperPulse);
+					yStepperPulse = !yStepperPulse;
+
+					// Change current position depending on the direction
+					if(directionY) currentY++;
+					else currentY--;
+
+					j++;
+				}
+				else {
+					if(i < abs(delta_appX)){
+
+						xStep->write(xStepperPulse);
+						xStepperPulse = !xStepperPulse;
+
+						// Change current position depending on the direction
+						if(directionX) currentX++;
+						else currentX--;
+
+						i++;
+					}
+				}
+				break;
 			}
 		}
 
-		/* Calibration */
-		if(isCalibrating) {
+		if(i >= abs(delta_appX) && j >= abs(delta_appY)) {
+			mode = idle;
+		}
+		break;
+	}
 
-			/* X-AXIS */
-			if(xLimitsHit < 2) {
+	case calibrating:
+	{
+		/* X-AXIS */
+		if(xLimitsHit < 2) {
 
-				// Run
+			// Run
+			xDir->write(xStepperDir);
+			xStep->write(xStepperPulse);
+			xStepperPulse = !xStepperPulse;
+
+			// Run to both ends
+			if(xLimit1->read() && (xStepperDir == false)){
+				xTotalSteps = xStepCount;
+				xStepCount = 0;
+				xLimitsHit++;
+				xStepperDir = true;
+			}
+			else if(xLimit2->read() && (xStepperDir == true)) {
+				xTotalSteps = xStepCount;
+				xStepCount = 0;
+				xLimitsHit++;
+				xStepperDir = false;
+			}
+
+			xStepCount++;
+		}
+
+		/* Y-AXIS */
+		if(yLimitsHit < 2) {
+
+			// Run
+			yDir->write(yStepperDir);
+			yStep->write(yStepperPulse);
+			yStepperPulse = !yStepperPulse;
+
+			// Run to both ends
+			if(yLimit1->read() && (yStepperDir == false)){
+				yTotalSteps = yStepCount;
+				yStepCount = 0;
+				yLimitsHit++;
+				yStepperDir = true;
+			}
+			else if(yLimit2->read() && (yStepperDir == true)) {
+				yTotalSteps = yStepCount;
+				yStepCount = 0;
+				yLimitsHit++;
+				yStepperDir = false;
+			}
+
+			yStepCount++;
+		}
+
+		// Finish calibration
+		if(xLimitsHit >= 2 && yLimitsHit >= 2) {
+			mode = idle;
+		}
+		break;
+	}
+
+	case resetting:
+	{
+		if(xLimit1->read() && yLimit1->read()) {
+			mode = idle;
+		}
+
+		else{
+			if(!xLimit1->read()) {
 				xDir->write(xStepperDir);
 				xStep->write(xStepperPulse);
 				xStepperPulse = !xStepperPulse;
-
-				// Run to both ends
-				if(xLimit1->read() && (xStepperDir == false)){
-					xTotalSteps = xStepCount;
-					xStepCount = 0;
-					xLimitsHit++;
-					xStepperDir = true;
-				}
-				else if(xLimit2->read() && (xStepperDir == true)) {
-					xTotalSteps = xStepCount;
-					xStepCount = 0;
-					xLimitsHit++;
-					xStepperDir = false;
-				}
-
-				xStepCount++;
 			}
 
-			/* Y-AXIS */
-			if(yLimitsHit < 2) {
-
-				// Run
+			if(!yLimit1->read()) {
 				yDir->write(yStepperDir);
 				yStep->write(yStepperPulse);
 				yStepperPulse = !yStepperPulse;
-
-				// Run to both ends
-				if(yLimit1->read() && (yStepperDir == false)){
-					yTotalSteps = yStepCount;
-					yStepCount = 0;
-					yLimitsHit++;
-					yStepperDir = true;
-				}
-				else if(yLimit2->read() && (yStepperDir == true)) {
-					yTotalSteps = yStepCount;
-					yStepCount = 0;
-					yLimitsHit++;
-					yStepperDir = false;
-				}
-
-				yStepCount++;
-			}
-
-			// Finish calibration
-			if(xLimitsHit >= 2 && yLimitsHit >= 2) {
-				RIT_running = false;
 			}
 		}
-
-		/* Return plotter to origo */
-		if(isResetting) {
-
-			if(xLimit1->read() && yLimit1->read()) {
-				RIT_running = false;
-			}
-
-			else{
-				if(!xLimit1->read()) {
-					xDir->write(xStepperDir);
-					xStep->write(xStepperPulse);
-					xStepperPulse = !xStepperPulse;
-				}
-
-				if(!yLimit1->read()) {
-					yDir->write(yStepperDir);
-					yStep->write(yStepperPulse);
-					yStepperPulse = !yStepperPulse;
-				}
-			}
-		}
-
+		break;
 	}
-	else {
+	case idle:
+	{
 		Chip_RIT_Disable(LPC_RITIMER); // disable timer
 		// Give semaphore and set context switch flag if a higher priority task was woken up
 		xSemaphoreGiveFromISR(sbRIT, &xHigherPriorityWoken);
+		break;
 	}
+	}
+
 	// End the ISR and (possibly) do a context switch
 	portEND_SWITCHING_ISR(xHigherPriorityWoken);
 }
@@ -385,6 +394,8 @@ StepperDriver::~StepperDriver() {
 
 /* Plot */
 void StepperDriver::plot(Point point) {
+
+	mode = running;
 
 	realX2 = point.getPointX() / stepperResolution;	// Steps
 	realY2 = point.getPointY() / stepperResolution;	// Steps
@@ -437,14 +448,12 @@ void StepperDriver::plot(Point point) {
 		}
 	}
 
-	RIT_running = true;
-
 	// Set "speed" depending on pen position //
 	// Works only on servo-only plotter //
 	if(Servo::isDown()) setTime(130);
 	else setTime(70);
 
-	RIT_start(10000, microSeconds);
+	RIT_start(microSeconds);
 
 	realX1 = realX2;
 	realY1 = realY2;
@@ -455,48 +464,42 @@ void StepperDriver::plot(Point point) {
 	// Printing
 
 	snprintf(report, sizeof(report), "Current x: %d,   Real x: %d\n\r"
-									 "Current y: %d,   Real y: %d\n\r",
-					currentX, appX2, currentY, appY2);
+			"Current y: %d,   Real y: %d\n\r",
+			currentX, appX2, currentY, appY2);
 	ITM_write(report);
 }
 
 /* Calibrate plotter */
 void StepperDriver::calibrate() {
-	isCalibrating = true;
-	isRunning = false;
+	mode = calibrating;
 
-	RIT_start(10000, 150);
+	RIT_start(150);
 
-	stepperResolution = (((310.0 / xTotalSteps) + (380.0 / yTotalSteps)) / 2);
-
-	isCalibrating = false;
-	isRunning = true;
-}
-
-/* Set time for RIT */
-void StepperDriver::setTime(int time) {
-	microSeconds = time;
+	stepperResolution = (((250.0 / xTotalSteps) + (350.0 / yTotalSteps)) / 2);
 }
 
 /* Reset plotter position */
 void StepperDriver::reset() {
-	isRunning = false;
-	isResetting = true;
+
+	mode = resetting;
+
 	xStepperDir = false;
 	yStepperDir = false;
 	xDir->write(xStepperDir);
 	yDir->write(yStepperDir);
 
-	RIT_running = true;
-	RIT_start(10000, 150);
+	RIT_start(150);
 
 	currentX = 0;
 	currentY = 0;
 	realX1 = 0;
 	realY1 = 0;
-	isRunning = true;
-	isResetting = false;
 	xStepperDir = true;
 	yStepperDir = true;
 
+}
+
+/* Set time for RIT */
+void StepperDriver::setTime(int time) {
+	microSeconds = time;
 }
