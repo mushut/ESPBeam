@@ -35,7 +35,7 @@ using namespace std;
 
 /* Global Variables */
 struct commandEvent{
-	char command[30];
+	char input[30];
 };
 
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
@@ -174,6 +174,8 @@ static void read_task(void *pvParameters) {
 	uint32_t x = 0;
 	uint32_t y = 0;
 
+	bool breakFlag = false;
+
 	/* Infinite loop */
 	while(1) {
 
@@ -189,14 +191,19 @@ static void read_task(void *pvParameters) {
 				}
 			}
 
-			// Stop reading when '\n' received
-			if(buffer[len - 1] == '\n'){
-				break;
+			// Check if line break received
+			for(x = 0; input[x] != 0; x++) {
+				if(input[x] == '\n') {
+					breakFlag = true;
+				}
 			}
+
+			// Break if line break received
+			if(breakFlag) break;
 		}
 
 		// Copy given command to the queue object
-		strcpy(e.command, input);
+		strcpy(e.input, input);
 
 		// Send queue object to queue
 		xQueueSendToBack(xQueue, &e, portMAX_DELAY);
@@ -204,7 +211,7 @@ static void read_task(void *pvParameters) {
 		// Reset values
 		memset(input, 0, sizeof(input));
 		memset(buffer, 0, sizeof(buffer));
-		memset(e.command, 0, sizeof(e.command));
+		memset(e.input, 0, sizeof(e.input));
 		y = 0;
 	}
 }
@@ -224,7 +231,7 @@ static void execute_task(void *pvParameters) {
 		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 1)) {
 
 			// Command execution
-			command = *(parser.parseGCode(e.command));	// Parse given command into a Command object
+			command = *(parser.parseGCode(e.input));	// Parse given command into a Command object
 			executeCommand(command);					// Execute given command
 		}
 
