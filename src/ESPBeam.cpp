@@ -88,14 +88,16 @@ void executeCommand(GCommand &cmd) {
 
 	// Servo
 	case M1:
+	{
 		if(!isOffLimits) {
 			servo->rotate(cmd.penState);
 		}
 		USB_send((uint8_t *)ok, sizeof(ok));
 		vTaskDelay(300);
 		break;
+	}
 
-		// Initialisation
+	// Initialisation
 	case M10:
 	{
 		char m10[] = "M10 XY 250 350 0.00 0.00 A1 B1 H0 S80 U160 D90\n";
@@ -107,21 +109,22 @@ void executeCommand(GCommand &cmd) {
 	// Stepper
 	case G1:
 	{
-
+		// Check if given coordinates are within limits
 		if(checkCommand(cmd)) {
 
 			//Run the stepper
 			stepperDriver->plot(cmd.point);
 
+			// Check flag
 			if(isOffLimits) {
-				isOffLimits = false;
-				servo->rotate("90");
-				vTaskDelay(300);
+				isOffLimits = false;	// Reset flag
+				servo->rotate("90"); 	// Drive pen down
+				vTaskDelay(300);		// Delay
 			}
 		}
 		else{
-			servo->rotate("160");
-			isOffLimits = true;
+			servo->rotate("160");		// Drive pen up
+			isOffLimits = true;			// Set flag
 		}
 
 		USB_send((uint8_t *)ok, sizeof(ok));
@@ -130,17 +133,21 @@ void executeCommand(GCommand &cmd) {
 
 	// Some other G-command...
 	case G28:
+	{
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
+	}
 
-		// Reset
+	// Laser *NOT COMPLETE*
 	case M4:
-		servo->rotate("160");		// Drive pen up
-		stepperDriver->reset();
-		USB_send((uint8_t *)ok, sizeof(ok));
+	{
+		//		servo->rotate("160");
+		//		stepperDriver->reset();
+		//		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
+	}
 
-		// Default case
+	// Default case
 	default:
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
@@ -210,14 +217,17 @@ static void stepper_driver(void *pvParameters) {
 	/* Loop */
 	while(1) {
 
-		// Try to receive item from queue
-		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 3)) {
+		// Try to receive item from queue for a second
+		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 1)) {
 
 			// Command execution
 			command = *(parser.parseGCode(e.command));	// Parse given command into a Command object
 			executeCommand(command);					// Execute given command
 		}
+
 		else {
+			// Reset plotter position
+			stepperDriver->reset();
 		}
 
 		// Delay
