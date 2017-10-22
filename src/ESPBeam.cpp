@@ -213,6 +213,7 @@ static void read_task(void *pvParameters) {
 		memset(buffer, 0, sizeof(buffer));
 		memset(e.input, 0, sizeof(e.input));
 		y = 0;
+		breakFlag = false;
 	}
 }
 
