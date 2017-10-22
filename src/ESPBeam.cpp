@@ -30,6 +30,9 @@ using namespace std;
 #include "Semaphore.h"
 #include "Servo.h"
 
+#define LIMIT_X 250
+#define LIMIT_Y 350
+
 // TODO: insert other definitions and declarations here
 struct commandEvent{
 	char command[30];
@@ -38,6 +41,8 @@ struct commandEvent{
 QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
 StepperDriver *stepperDriver;
 Servo *servo;
+
+bool isOffLimits = false;
 
 /* the following is required if runtime statistics are to be collected */
 extern "C" {
@@ -62,6 +67,18 @@ static void prvSetupHardware(void)
 
 }
 
+bool checkCommand(GCommand &cmd) {
+
+	// Check if given command is within the limits
+	if(cmd.point.getPointX() <= LIMIT_X &&
+			cmd.point.getPointY() <= LIMIT_Y &&
+			cmd.point.getPointX() >= 0 &&
+			cmd.point.getPointY() >= 0){
+		return true;
+	}
+	return false;
+}
+
 /* Public Functions */
 void executeCommand(GCommand &cmd) {
 	char ok[] = "OK\n";
@@ -71,14 +88,17 @@ void executeCommand(GCommand &cmd) {
 
 	// Servo
 	case M1:
-		servo->rotate(cmd.penState);
+		if(!isOffLimits) {
+			servo->rotate(cmd.penState);
+		}
 		USB_send((uint8_t *)ok, sizeof(ok));
+		vTaskDelay(300);
 		break;
 
 		// Initialisation
 	case M10:
 	{
-		char m10[] = "M10 XY 380 310 0.00 0.00 A1 B1 H0 S80 U160 D90\n";
+		char m10[] = "M10 XY 250 350 0.00 0.00 A1 B1 H0 S80 U160 D90\n";
 		USB_send((uint8_t *)m10, sizeof(m10));
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
@@ -88,14 +108,35 @@ void executeCommand(GCommand &cmd) {
 	case G1:
 	{
 
-		//Run the stepper
-		stepperDriver->plot(cmd.point);
+		if(checkCommand(cmd)) {
+
+			//Run the stepper
+			stepperDriver->plot(cmd.point);
+
+			if(isOffLimits) {
+				isOffLimits = false;
+				servo->rotate("90");
+				vTaskDelay(300);
+			}
+		}
+		else{
+			servo->rotate("160");
+			isOffLimits = true;
+		}
+
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 	}
 
 	// Some other G-command...
 	case G28:
+		USB_send((uint8_t *)ok, sizeof(ok));
+		break;
+
+		// Reset
+	case M4:
+		servo->rotate("160");		// Drive pen up
+		stepperDriver->reset();
 		USB_send((uint8_t *)ok, sizeof(ok));
 		break;
 
@@ -177,7 +218,6 @@ static void stepper_driver(void *pvParameters) {
 			executeCommand(command);					// Execute given command
 		}
 		else {
-			USB_send((uint8_t *)"OK\n", 3);
 		}
 
 		// Delay
@@ -199,17 +239,17 @@ int main(void) {
 
 	/* Read USB -thread */
 	xTaskCreate(usb_read, "usb_read",
-			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 2UL),
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 
 	/* Stepper driver -thread */
 	xTaskCreate(stepper_driver, "stepper_driver",
-			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 2UL),
+			configMINIMAL_STACK_SIZE * 7, NULL, (tskIDLE_PRIORITY + 2UL),
 			(TaskHandle_t *) NULL);
 
 	/* CDC Task */
 	xTaskCreate(cdc_task, "CDC",
-			configMINIMAL_STACK_SIZE * 5, NULL, (tskIDLE_PRIORITY + 1UL),
+			configMINIMAL_STACK_SIZE * 3, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 

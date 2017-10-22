@@ -15,6 +15,7 @@ enum code{
 	M10,
 	G1,
 	G28,
+	M4,
 	CLR
 };
 

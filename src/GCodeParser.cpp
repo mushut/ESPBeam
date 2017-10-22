@@ -81,6 +81,10 @@ GCommand *GCodeParser::parseGCode(char gCodeRaw[]) {
 		gCommand.gCodeCommand = G28;
 	}
 
+	else if(strcmp(code[0], "M4") == 0) {
+		gCommand.gCodeCommand = M4;
+	}
+
 	/* Just in case */
 	else {
 		gCommand.gCodeCommand = CLR;

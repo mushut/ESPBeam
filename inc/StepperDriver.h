@@ -8,12 +8,7 @@
 #ifndef STEPPERDRIVER_H_
 #define STEPPERDRIVER_H_
 
-#include "DigitalIoPin.h"
 #include "Point.h"
-#include "chip.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
 
 class StepperDriver {
 public:
@@ -21,7 +16,10 @@ public:
 	virtual ~StepperDriver();
 	void plot(Point point);
 	void calibrate();
-	bool checkLimits();
+	static void setTime(int time);
+	void reset();
+private:
+	char report[96];
 };
 
 #endif /* STEPPERDRIVER_H_ */

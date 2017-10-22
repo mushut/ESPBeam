@@ -8,6 +8,9 @@
 #include "Servo.h"
 #include "chip.h"
 #include "string.h"
+#include "StepperDriver.h"
+
+int Servo::pos;
 
 void SCT_Init() {
 	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O, 0, 10);
@@ -44,10 +47,19 @@ void Servo::rotate(char* angle) {
 	// Down
 	if(strcmp(angle, "90") == 0) {
 		LPC_SCTLARGE0->MATCHREL[1].L = 3000;
+		pos = down;
 	}
 
 	// Up
 	else if(strcmp(angle, "160") == 0) {
 		LPC_SCTLARGE0->MATCHREL[1].L = 2200;
+		pos = up;
 	}
+}
+
+bool Servo::isDown() {
+	if(pos == down) {
+		return true;
+	}
+	return false;
 }

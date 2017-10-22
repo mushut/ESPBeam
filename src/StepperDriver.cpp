@@ -5,9 +5,17 @@
  *      Author: Eibl-PC
  */
 
+
+#include "DigitalIoPin.h"
 #include <math.h>
 #include <stdlib.h>
 #include "StepperDriver.h"
+#include "ITM_write.h"
+#include "chip.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "Servo.h"
 
 using namespace std;
 
@@ -32,12 +40,13 @@ DigitalIoPin *yDir;
 
 bool isCalibrating;
 bool isRunning;
+bool isResetting;
 bool xStepperDir;
 bool yStepperDir;
 bool xStepperPulse;
 bool yStepperPulse;
 
-static int initTime;
+static int microSeconds;
 static int xTotalSteps;
 static int yTotalSteps;
 int xLimitsHit;
@@ -303,8 +312,30 @@ void RIT_IRQHandler(void)
 			if(xLimitsHit >= 2 && yLimitsHit >= 2) {
 				RIT_running = false;
 			}
-
 		}
+
+		/* Return plotter to origo */
+		if(isResetting) {
+
+			if(xLimit1->read() && yLimit1->read()) {
+				RIT_running = false;
+			}
+
+			else{
+				if(!xLimit1->read()) {
+					xDir->write(xStepperDir);
+					xStep->write(xStepperPulse);
+					xStepperPulse = !xStepperPulse;
+				}
+
+				if(!yLimit1->read()) {
+					yDir->write(yStepperDir);
+					yStep->write(yStepperPulse);
+					yStepperPulse = !yStepperPulse;
+				}
+			}
+		}
+
 	}
 	else {
 		Chip_RIT_Disable(LPC_RITIMER); // disable timer
@@ -331,12 +362,13 @@ StepperDriver::StepperDriver() {
 
 	isCalibrating = true;
 	isRunning = false;
+	isResetting = false;
 	xStepperDir = true;
 	yStepperDir = true;
 	xStepperPulse = true;
 	yStepperPulse = true;
 
-	initTime = 150;
+	microSeconds = 150;
 	xTotalSteps = 0;
 	yTotalSteps = 0;
 	xLimitsHit = 0;
@@ -387,12 +419,6 @@ void StepperDriver::plot(Point point) {
 	xDir->write(directionX);
 	yDir->write(directionY);
 
-	// Convert values to absolute values
-	//	delta_appX = abs(delta_appX);
-	//	delta_appY = abs(delta_appY);
-	//	delta_realX = abs(delta_realX);
-	//	delta_realY = abs(delta_realY);
-
 	// Up or down
 	if (delta_appX == 0) {
 		direction = vertical;
@@ -413,12 +439,23 @@ void StepperDriver::plot(Point point) {
 
 	RIT_running = true;
 
-	RIT_start(10000, initTime);
+	if(Servo::isDown()) setTime(130);
+	else setTime(70);
+
+	RIT_start(10000, microSeconds);
 
 	realX1 = realX2;
 	realY1 = realY2;
+
 	i = 0;
 	j = 0;
+
+	// Printing
+
+	snprintf(report, sizeof(report), "Current x: %d,   Real x: %d\n\r"
+									 "Current y: %d,   Real y: %d\n\r",
+					currentX, appX2, currentY, appY2);
+	ITM_write(report);
 }
 
 /* Calibrate plotter */
@@ -434,3 +471,28 @@ void StepperDriver::calibrate() {
 	isRunning = true;
 }
 
+void StepperDriver::setTime(int time) {
+	microSeconds = time;
+}
+
+void StepperDriver::reset() {
+	isRunning = false;
+	isResetting = true;
+	xStepperDir = false;
+	yStepperDir = false;
+	xDir->write(xStepperDir);
+	yDir->write(yStepperDir);
+
+	RIT_running = true;
+	RIT_start(10000, 150);
+
+	currentX = 0;
+	currentY = 0;
+	realX1 = 0;
+	realY1 = 0;
+	isRunning = true;
+	isResetting = false;
+	xStepperDir = true;
+	yStepperDir = true;
+
+}

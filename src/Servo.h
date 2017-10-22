@@ -9,10 +9,19 @@
 #define SERVO_H_
 
 class Servo {
+
+	enum position {
+		down,
+		up
+	};
+
 public:
 	Servo();
 	virtual ~Servo();
 	void rotate(char* angle);
+	static bool isDown();
+private:
+	static int pos;
 };
 
 #endif /* SERVO_H_ */
