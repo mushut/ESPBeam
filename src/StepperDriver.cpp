@@ -45,9 +45,6 @@ DigitalIoPin *yLimit2;
 DigitalIoPin *yStep;
 DigitalIoPin *yDir;
 
-bool isCalibrating;
-bool isRunning;
-bool isResetting;
 bool xStepperDir;
 bool yStepperDir;
 bool xStepperPulse;
@@ -150,6 +147,7 @@ void RIT_IRQHandler(void)
 
 	switch(mode) {
 
+	/* Plotting */
 	case running:
 	{
 		/* Check if any limit is triggered */
@@ -263,6 +261,7 @@ void RIT_IRQHandler(void)
 		break;
 	}
 
+	/* Calibration */
 	case calibrating:
 	{
 		/* X-AXIS */
@@ -322,6 +321,7 @@ void RIT_IRQHandler(void)
 		break;
 	}
 
+	/* Reset position */
 	case resetting:
 	{
 		if(xLimit1->read() && yLimit1->read()) {
@@ -343,6 +343,8 @@ void RIT_IRQHandler(void)
 		}
 		break;
 	}
+
+	/* Disable timer */
 	case idle:
 	{
 		Chip_RIT_Disable(LPC_RITIMER); // disable timer
@@ -370,9 +372,6 @@ StepperDriver::StepperDriver() {
 	xStep = new DigitalIoPin(0, 24, DigitalIoPin::output, false);
 	xDir = new DigitalIoPin(1, 0, DigitalIoPin::output, false);
 
-	isCalibrating = true;
-	isRunning = false;
-	isResetting = false;
 	xStepperDir = true;
 	yStepperDir = true;
 	xStepperPulse = true;
@@ -473,13 +472,14 @@ void StepperDriver::plot(Point point) {
 void StepperDriver::calibrate() {
 	mode = calibrating;
 
-	RIT_start(150);
+	setTime(150);
+	RIT_start(microSeconds);
 
 	stepperResolution = (((250.0 / xTotalSteps) + (350.0 / yTotalSteps)) / 2);
 }
 
 /* Reset plotter position */
-void StepperDriver::reset() {
+void StepperDriver::reset() 	{
 
 	mode = resetting;
 
@@ -488,7 +488,8 @@ void StepperDriver::reset() {
 	xDir->write(xStepperDir);
 	yDir->write(yStepperDir);
 
-	RIT_start(150);
+	setTime(150);
+	RIT_start(microSeconds);
 
 	currentX = 0;
 	currentY = 0;

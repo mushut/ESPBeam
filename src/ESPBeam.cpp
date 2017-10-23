@@ -43,6 +43,7 @@ QueueHandle_t xQueue = xQueueCreate(10, sizeof(commandEvent));
 StepperDriver *stepperDriver;
 Servo *servo;
 bool isOffLimits = false;
+bool isCalibrating = false;
 char penUp[5] = "160";
 char penDown[5] = "90";
 
@@ -163,8 +164,10 @@ void executeCommand(GCommand &cmd) {
 static void read_task(void *pvParameters) {
 
 	/* Calibrate stepper */
+	isCalibrating = true;
 	servo->rotate(penUp);		// Drive pen up
 	stepperDriver->calibrate(); // Calibrate
+	isCalibrating = false;
 
 	/* Initialise variables */
 	char buffer[30] = {0};
@@ -230,7 +233,7 @@ static void execute_task(void *pvParameters) {
 	while(1) {
 
 		// Try to receive item from queue for a second
-		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 1)) {
+		if(xQueueReceive(xQueue, &e, configTICK_RATE_HZ * 3)) {
 
 			// Command execution
 			command = *(parser.parseGCode(e.input));	// Parse given command into a Command object
@@ -239,7 +242,9 @@ static void execute_task(void *pvParameters) {
 
 		else {
 			// Reset plotter position if no commands received for a second
-			stepperDriver->reset();
+			if(!isCalibrating){
+				stepperDriver->reset();
+			}
 		}
 
 		// Delay
