@@ -116,6 +116,7 @@ void RIT_start(int us)
 }
 
 /* Update timer */
+/* This function is used when acceleration is needed within an interrupt*/
 void RIT_update(int us) {
 
 	uint64_t cmp_value = (uint64_t) Chip_Clock_GetSystemClockRate() * (uint64_t) us / 1000000; // Calculate compare value
